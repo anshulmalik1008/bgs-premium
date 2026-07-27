@@ -7,13 +7,11 @@ import GiftStudio from "./components/gift-studio/Giftstudio";
 import PosterShowcase from "./components/poster-showcase/PosterShowcase";
 import OccasionJourney from "./components/occasion-journey/OccasionJourney";
 import GiftFinderConcierge from "./components/gift-finder/GiftFinderConcierge";
-// import Featured from "./components/featured/Featured";
-// import LuxuryShowcase from "./components/luxuryshowcase/LuxuryShowcase";
-// import Categories from "./components/categories/Categories";
-// import PremiumCategories from "./components/categories-story/PremiumCategories";
-
-import CollectionUniverse from "./components/collection-universe/CollectionUniverse";
-import FloatingUniverse from "./components/floating-universe/FloatingUniverse";
+import LuxuryExperienceWall from "./components/luxury-experience/LuxuryExperienceWall";
+import CustomerLove from "./components/customer-love/CustomerLove";
+import SocialGallery from "./components/social-gallery/SocialGallery";
+import TrustedBrands from "./components/trusted-brands/TrustedBrands";
+import LuxuryFooter from "./components/luxury-footer-pro/LuxuryFooter";
 
 export default function Home() {
   return (
@@ -29,13 +27,16 @@ export default function Home() {
        <PosterShowcase />
        <OccasionJourney />
        <GiftFinderConcierge />
-      {/* <Featured />
-      <LuxuryShowcase /> */}
-      <FloatingUniverse />
-      {/* <PremiumCategories /> */}
-      
-      <CollectionUniverse />
-      
+       <LuxuryExperienceWall />
+       <CustomerLove />
+       <SocialGallery />
+       <TrustedBrands />
+       <LuxuryFooter />
+       
+
+
+       
+  
 
     </>
   );
