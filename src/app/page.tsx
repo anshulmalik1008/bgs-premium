@@ -6,8 +6,9 @@ import SignatureUniverse from "./components/signature/SignatureUniverse";
 import GiftStudio from "./components/gift-studio/Giftstudio";
 import PosterShowcase from "./components/poster-showcase/PosterShowcase";
 import OccasionJourney from "./components/occasion-journey/OccasionJourney";
-import Featured from "./components/featured/Featured";
-import LuxuryShowcase from "./components/luxuryshowcase/LuxuryShowcase";
+import GiftFinderConcierge from "./components/gift-finder/GiftFinderConcierge";
+// import Featured from "./components/featured/Featured";
+// import LuxuryShowcase from "./components/luxuryshowcase/LuxuryShowcase";
 // import Categories from "./components/categories/Categories";
 // import PremiumCategories from "./components/categories-story/PremiumCategories";
 
@@ -27,8 +28,9 @@ export default function Home() {
        <GiftStudio />
        <PosterShowcase />
        <OccasionJourney />
-      <Featured />
-      <LuxuryShowcase />
+       <GiftFinderConcierge />
+      {/* <Featured />
+      <LuxuryShowcase /> */}
       <FloatingUniverse />
       {/* <PremiumCategories /> */}
       
