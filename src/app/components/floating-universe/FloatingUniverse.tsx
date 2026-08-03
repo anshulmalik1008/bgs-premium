@@ -74,7 +74,7 @@ export default function FloatingUniverse() {
             </p>
 
             <p className="mt-1 text-xs text-white/60">
-              Explore the collection in 3D
+              Explore the collection in 3D 
             </p>
           </div>
         </header>

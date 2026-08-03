@@ -14,11 +14,7 @@ export default function HeroScrollAnimation() {
         y: 0,
       });
 
-      gsap.set(".hero-gift", {
-        scale: 1,
-        y: 0,
-      });
-
+      
       gsap.set(".hero-bg", {
         scale: 1,
         opacity: 1,

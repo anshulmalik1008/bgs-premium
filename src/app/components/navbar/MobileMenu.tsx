@@ -85,13 +85,19 @@ export default function MobileMenu({
         animate="visible"
         exit="exit"
         className="
-          fixed right-0 top-0 z-[120]
-          h-[100dvh] w-full max-w-[440px]
-          overflow-hidden border-l border-white/10
-          bg-[#080808]/95 shadow-[-30px_0_100px_rgba(0,0,0,0.5)]
-          backdrop-blur-3xl
-          [perspective:1400px]
-        "
+  fixed right-0 top-0 z-[120]
+  h-[100dvh] w-full max-w-[440px]
+  overflow-x-hidden overflow-y-auto
+  overscroll-contain
+  border-l border-white/10
+  bg-[#080808]/95
+  shadow-[-30px_0_100px_rgba(0,0,0,0.5)]
+  backdrop-blur-3xl
+  [perspective:1400px]
+  [scrollbar-width:thin]
+  [scrollbar-color:rgba(212,175,55,0.45)_transparent]
+"
+
       >
         {/* Animated background */}
         <div className="pointer-events-none absolute inset-0">
@@ -102,7 +108,7 @@ export default function MobileMenu({
           <div className="absolute inset-0 opacity-[0.035] [background-image:radial-gradient(#fff_0.7px,transparent_0.7px)] [background-size:14px_14px]" />
         </div>
 
-        <div className="relative flex h-full flex-col">
+        <div className="relative flex min-h-full flex-col">
           {/* Header */}
           <motion.div
             variants={itemVariants}
@@ -167,7 +173,7 @@ export default function MobileMenu({
           </motion.div>
 
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-5 py-7 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-7 pb-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <motion.div
               variants={itemVariants}
               className="mb-5 flex items-center justify-between px-1"

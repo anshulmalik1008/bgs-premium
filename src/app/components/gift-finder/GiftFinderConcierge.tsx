@@ -20,6 +20,7 @@ import {
   Gift,
   Heart,
   LoaderCircle,
+  
   Palette,
   PartyPopper,
   Plane,
@@ -43,9 +44,6 @@ import {
   type MouseEvent,
 } from "react";
 
-/* -------------------------------------------------------------------------- */
-/*                                    Types                                   */
-/* -------------------------------------------------------------------------- */
 
 type IconType = ComponentType<{
   size?: number;
@@ -58,6 +56,7 @@ type FinderOption = {
   label: string;
   description: string;
   icon: IconType;
+
 };
 
 type FinderStep = {
@@ -404,9 +403,6 @@ function MagneticButton({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                               Option Card                                  */
-/* -------------------------------------------------------------------------- */
 
 function OptionCard({
   option,
@@ -1641,6 +1637,7 @@ export default function GiftFinderConcierge() {
                       Start Again
                     </button>
                   </div>
+                  
 
                   <div className="mt-9 grid gap-5 lg:grid-cols-3">
                     {recommendations.map((product, index) => (
