@@ -1,9 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  type FormEvent,
+  useEffect,
+  useState,
+} from "react";
+
+import { useAuth } from "@/hooks/useAuth";
 import "./auth.css";
 
 type AuthMode = "login" | "register";
+
+type FormState = {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+};
+
+const initialForm: FormState = {
+  name: "",
+  email: "",
+  phone: "",
+  password: "",
+  confirmPassword: "",
+};
 
 function Icon({
   type,
@@ -99,13 +123,118 @@ function Icon({
 }
 
 export default function AuthPage() {
-  const [mode, setMode] = useState<AuthMode>("login");
-  const [showPassword, setShowPassword] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const router = useRouter();
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const {
+    user,
+    loading: authLoading,
+    login,
+    register,
+  } = useAuth();
+
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [form, setForm] = useState<FormState>(initialForm);
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<
+    "success" | "error" | ""
+  >("");
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace("/account");
+    }
+  }, [authLoading, user, router]);
+
+  function updateField(
+    field: keyof FormState,
+    value: string,
+  ) {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+
+    if (message) {
+      setMessage("");
+      setMessageType("");
+    }
+  }
+
+  function switchMode(nextMode: AuthMode) {
+    setMode(nextMode);
+    setForm(initialForm);
+    setMessage("");
+    setMessageType("");
+    setShowPassword(false);
+  }
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
-    setSubmitted(true);
+
+    setMessage("");
+    setMessageType("");
+
+    if (mode === "register") {
+      if (form.name.trim().length < 2) {
+        setMessage("Valid full name enter karo.");
+        setMessageType("error");
+        return;
+      }
+
+      if (form.password.length < 8) {
+        setMessage(
+          "Password minimum 8 characters ka hona chahiye.",
+        );
+        setMessageType("error");
+        return;
+      }
+
+      if (form.password !== form.confirmPassword) {
+        setMessage("Password aur confirm password match nahi karte.");
+        setMessageType("error");
+        return;
+      }
+    }
+
+    setSubmitting(true);
+
+    try {
+      const result =
+        mode === "login"
+          ? await login({
+              email: form.email,
+              password: form.password,
+            })
+          : await register({
+              name: form.name,
+              email: form.email,
+              phone: form.phone,
+              password: form.password,
+            });
+
+      setMessage(result.message);
+      setMessageType(result.success ? "success" : "error");
+
+      if (result.success) {
+        router.push("/account");
+        router.refresh();
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (authLoading) {
+    return (
+      <main className="auth-page auth-loading-screen">
+        <div className="auth-loader" />
+        <p>Checking your account...</p>
+      </main>
+    );
   }
 
   return (
@@ -125,7 +254,9 @@ export default function AuthPage() {
           </div>
 
           <div className="auth-visual-copy">
-            <span className="auth-kicker">✦ Welcome to BGS Luxury</span>
+            <span className="auth-kicker">
+              ✦ Welcome to BGS Luxury
+            </span>
 
             <h1>
               Thoughtful gifting,
@@ -133,8 +264,8 @@ export default function AuthPage() {
             </h1>
 
             <p>
-              Sign in to manage orders, save favourites and enjoy a more
-              personalised gifting experience.
+              Sign in to manage orders, save favourites and enjoy a
+              personalised luxury gifting experience.
             </p>
 
             <div className="auth-benefits">
@@ -153,23 +284,20 @@ export default function AuthPage() {
         </div>
 
         <div className="auth-form-panel">
-          <div className="auth-brand">
+          <Link href="/" className="auth-brand">
             <div className="auth-brand-mark">B</div>
 
             <div>
               <strong>BGS Luxury</strong>
               <span>Premium Gifting House</span>
             </div>
-          </div>
+          </Link>
 
           <div className="auth-switcher">
             <button
               type="button"
               className={mode === "login" ? "is-active" : ""}
-              onClick={() => {
-                setMode("login");
-                setSubmitted(false);
-              }}
+              onClick={() => switchMode("login")}
             >
               Sign In
             </button>
@@ -177,185 +305,222 @@ export default function AuthPage() {
             <button
               type="button"
               className={mode === "register" ? "is-active" : ""}
-              onClick={() => {
-                setMode("register");
-                setSubmitted(false);
-              }}
+              onClick={() => switchMode("register")}
             >
               Create Account
             </button>
           </div>
 
-          {submitted ? (
-            <div className="auth-success">
-              <div className="auth-success-icon">
+          <div className="auth-heading">
+            <span className="auth-kicker">
+              {mode === "login"
+                ? "Member Access"
+                : "Join the Circle"}
+            </span>
+
+            <h2>
+              {mode === "login"
+                ? "Welcome back."
+                : "Create your account."}
+            </h2>
+
+            <p>
+              {mode === "login"
+                ? "Enter your email and password to continue."
+                : "Save favourites, manage orders and unlock private access."}
+            </p>
+          </div>
+
+          {message && (
+            <div
+              className={`auth-message auth-message-${messageType}`}
+              role="alert"
+            >
+              {messageType === "success" && (
                 <Icon type="check" />
-              </div>
+              )}
 
-              <span className="auth-kicker">
-                {mode === "login" ? "Welcome Back" : "Account Created"}
-              </span>
-
-              <h2>
-                {mode === "login"
-                  ? "You are signed in."
-                  : "Your BGS account is ready."}
-              </h2>
-
-              <p>
-                This is currently a frontend demo. Real authentication will be
-                connected when we build the backend.
-              </p>
-
-              <a href="/account">
-                Open account
-                <Icon type="arrow" />
-              </a>
+              <span>{message}</span>
             </div>
-          ) : (
-            <>
-              <div className="auth-heading">
-                <span className="auth-kicker">
-                  {mode === "login" ? "Member Access" : "Join the Circle"}
-                </span>
+          )}
 
-                <h2>
-                  {mode === "login"
-                    ? "Welcome back."
-                    : "Create your account."}
-                </h2>
-
-                <p>
-                  {mode === "login"
-                    ? "Enter your details to continue to your account."
-                    : "Save favourites, track orders and unlock private access."}
-                </p>
-              </div>
-
-              <form className="auth-form" onSubmit={handleSubmit}>
-                {mode === "register" && (
-                  <>
-                    <label className="auth-field">
-                      <span>Full name</span>
-
-                      <div>
-                        <Icon type="user" />
-
-                        <input required placeholder="Enter your full name" />
-                      </div>
-                    </label>
-
-                    <label className="auth-field">
-                      <span>Mobile number</span>
-
-                      <div>
-                        <Icon type="phone" />
-
-                        <input
-                          required
-                          inputMode="tel"
-                          placeholder="+91 98765 43210"
-                        />
-                      </div>
-                    </label>
-                  </>
-                )}
-
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {mode === "register" && (
+              <>
                 <label className="auth-field">
-                  <span>Email address</span>
+                  <span>Full name</span>
 
                   <div>
-                    <Icon type="mail" />
+                    <Icon type="user" />
 
                     <input
                       required
-                      type="email"
-                      placeholder="name@example.com"
+                      value={form.name}
+                      onChange={(event) =>
+                        updateField("name", event.target.value)
+                      }
+                      placeholder="Enter your full name"
+                      autoComplete="name"
                     />
                   </div>
                 </label>
 
                 <label className="auth-field">
-                  <span>Password</span>
+                  <span>Mobile number</span>
 
                   <div>
-                    <Icon type="lock" />
+                    <Icon type="phone" />
 
                     <input
-                      required
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter password"
+                      value={form.phone}
+                      onChange={(event) =>
+                        updateField("phone", event.target.value)
+                      }
+                      inputMode="tel"
+                      placeholder="+91 98765 43210"
+                      autoComplete="tel"
                     />
-
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((value) => !value)}
-                      aria-label="Toggle password visibility"
-                    >
-                      <Icon type="eye" />
-                    </button>
                   </div>
                 </label>
+              </>
+            )}
 
-                {mode === "login" ? (
-                  <div className="auth-options">
-                    <label>
-                      <input type="checkbox" />
-                      <span>Remember me</span>
-                    </label>
+            <label className="auth-field">
+              <span>Email address</span>
 
-                    <button type="button">Forgot password?</button>
-                  </div>
-                ) : (
-                  <label className="auth-terms">
-                    <input required type="checkbox" />
-                    <span>
-                      I agree to the Terms, Privacy Policy and communication
-                      preferences.
-                    </span>
-                  </label>
-                )}
+              <div>
+                <Icon type="mail" />
 
-                <button type="submit" className="auth-submit">
-                  {mode === "login" ? "Sign in securely" : "Create account"}
-                  <Icon type="arrow" />
-                </button>
-              </form>
-
-              <div className="auth-divider">
-                <span>or continue with</span>
+                <input
+                  required
+                  type="email"
+                  value={form.email}
+                  onChange={(event) =>
+                    updateField("email", event.target.value)
+                  }
+                  placeholder="name@example.com"
+                  autoComplete="email"
+                />
               </div>
+            </label>
 
-              <div className="auth-social-buttons">
-                <button type="button">
-                  <span>G</span>
-                  Google
-                </button>
+            <label className="auth-field">
+              <span>Password</span>
 
-                <button type="button">
-                  <span>A</span>
-                  Apple
-                </button>
-              </div>
+              <div>
+                <Icon type="lock" />
 
-              <p className="auth-footer-note">
-                {mode === "login"
-                  ? "New to BGS Luxury?"
-                  : "Already have an account?"}
+                <input
+                  required
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(event) =>
+                    updateField("password", event.target.value)
+                  }
+                  placeholder="Minimum 8 characters"
+                  autoComplete={
+                    mode === "login"
+                      ? "current-password"
+                      : "new-password"
+                  }
+                />
 
                 <button
                   type="button"
                   onClick={() =>
-                    setMode((current) =>
-                      current === "login" ? "register" : "login"
-                    )
+                    setShowPassword((current) => !current)
+                  }
+                  aria-label={
+                    showPassword
+                      ? "Hide password"
+                      : "Show password"
                   }
                 >
-                  {mode === "login" ? "Create account" : "Sign in"}
+                  <Icon type="eye" />
                 </button>
-              </p>
-            </>
-          )}
+              </div>
+            </label>
+
+            {mode === "register" && (
+              <label className="auth-field">
+                <span>Confirm password</span>
+
+                <div>
+                  <Icon type="lock" />
+
+                  <input
+                    required
+                    type={showPassword ? "text" : "password"}
+                    value={form.confirmPassword}
+                    onChange={(event) =>
+                      updateField(
+                        "confirmPassword",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Enter password again"
+                    autoComplete="new-password"
+                  />
+                </div>
+              </label>
+            )}
+
+            {mode === "login" ? (
+              <div className="auth-options">
+                <label>
+                  <input type="checkbox" />
+                  <span>Remember me</span>
+                </label>
+
+                <button type="button">
+                  Forgot password?
+                </button>
+              </div>
+            ) : (
+              <label className="auth-terms">
+                <input required type="checkbox" />
+
+                <span>
+                  I agree to the Terms and Privacy Policy.
+                </span>
+              </label>
+            )}
+
+            <button
+              type="submit"
+              className="auth-submit"
+              disabled={submitting}
+            >
+              {submitting
+                ? mode === "login"
+                  ? "Signing in..."
+                  : "Creating account..."
+                : mode === "login"
+                  ? "Sign in securely"
+                  : "Create account"}
+
+              {!submitting && <Icon type="arrow" />}
+            </button>
+          </form>
+
+          <p className="auth-footer-note">
+            {mode === "login"
+              ? "New to BGS Luxury?"
+              : "Already have an account?"}
+
+            <button
+              type="button"
+              onClick={() =>
+                switchMode(
+                  mode === "login" ? "register" : "login",
+                )
+              }
+            >
+              {mode === "login"
+                ? "Create account"
+                : "Sign in"}
+            </button>
+          </p>
         </div>
       </section>
     </main>
