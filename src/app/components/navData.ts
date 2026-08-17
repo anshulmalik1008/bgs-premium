@@ -25,7 +25,7 @@ export const navLinks: NavLink[] = [
     mega: false,
   },
   {
-    title: "Account",
+    title: "Profile",
     href: "/account",
     description: "Manage profile and orders",
     mega: false,
