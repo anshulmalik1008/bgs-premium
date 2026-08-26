@@ -6,6 +6,7 @@ import {
   useSearchParams,
 } from "next/navigation";
 import {
+  Suspense,
   type FormEvent,
   useEffect,
   useState,
@@ -125,7 +126,7 @@ function Icon({
   );
 }
 
-export default function AuthPage() {
+function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -156,15 +157,15 @@ export default function AuthPage() {
   >("");
 
   useEffect(() => {
-  if (!authLoading && user) {
-    router.replace(redirectTo);
-  }
-}, [
-  authLoading,
-  user,
-  router,
-  redirectTo,
-]);
+    if (!authLoading && user) {
+      router.replace(redirectTo);
+    }
+  }, [
+    authLoading,
+    user,
+    router,
+    redirectTo,
+  ]);
   function updateField(
     field: keyof FormState,
     value: string,
@@ -198,7 +199,7 @@ export default function AuthPage() {
 
     if (mode === "register") {
       if (form.name.trim().length < 2) {
-        setMessage("please enter a valid name.");
+        setMessage("Please enter a valid full name.");
         setMessageType("error");
         return;
       }
@@ -212,7 +213,7 @@ export default function AuthPage() {
       }
 
       if (form.password !== form.confirmPassword) {
-        setMessage("Password do not match .");
+        setMessage("Passwords do not match.");
         setMessageType("error");
         return;
       }
@@ -238,9 +239,9 @@ export default function AuthPage() {
       setMessageType(result.success ? "success" : "error");
 
       if (result.success) {
-  router.replace(redirectTo);
-  router.refresh();
-}
+        router.replace(redirectTo);
+        router.refresh();
+      }
     } finally {
       setSubmitting(false);
     }
@@ -542,5 +543,20 @@ export default function AuthPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="auth-page auth-loading-screen">
+          <div className="auth-loader" />
+          <p>Loading account...</p>
+        </main>
+      }
+    >
+      <AuthPageContent />
+    </Suspense>
   );
 }
