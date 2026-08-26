@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { UserRole } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import {
@@ -56,7 +57,10 @@ export async function POST(request: Request) {
       );
     }
 
-    if (user.role !== "AGENT" && user.role !== "ADMIN") {
+     if (
+  user.role !== UserRole.AGENT &&
+  user.role !== UserRole.ADMIN
+) {
       return NextResponse.json(
         {
           success: false,
