@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import {
   createSessionToken,
-  setCustomerSession,
+  setSessionCookie,
 } from "@/lib/auth";
 
 type LoginBody = {
@@ -16,17 +16,14 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as LoginBody;
 
-    const email =
-      body.email?.trim().toLowerCase() ?? "";
-
-    const password = body.password ?? "";
+    const email = body.email?.trim().toLowerCase();
+    const password = body.password?.trim();
 
     if (!email || !password) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Email aur password required hain.",
+          message: "Email aur password required hain.",
         },
         {
           status: 400,
@@ -38,12 +35,10 @@ export async function POST(request: Request) {
       where: {
         email,
       },
-
       select: {
         id: true,
         name: true,
         email: true,
-        phone: true,
         passwordHash: true,
         role: true,
       },
@@ -53,8 +48,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Email ya password galat hai.",
+          message: "Invalid email ya password.",
         },
         {
           status: 401,
@@ -62,12 +56,12 @@ export async function POST(request: Request) {
       );
     }
 
-    if (user.role !== "CUSTOMER") {
+    if (user.role !== "AGENT" && user.role !== "ADMIN") {
       return NextResponse.json(
         {
           success: false,
           message:
-            "Please use the correct portal for this account.",
+            "Is account ko Agent Portal access nahi hai.",
         },
         {
           status: 403,
@@ -75,18 +69,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const passwordMatches =
-      await bcrypt.compare(
-        password,
-        user.passwordHash,
-      );
+    const passwordMatch = await bcrypt.compare(
+      password,
+      user.passwordHash,
+    );
 
-    if (!passwordMatches) {
+    if (!passwordMatch) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Email ya password galat hai.",
+          message: "Invalid email ya password.",
         },
         {
           status: 401,
@@ -94,39 +86,33 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create the customer authentication token.
-    const token =
-      await createSessionToken({
-        userId: user.id,
-        role: user.role,
-      });
+    const token = await createSessionToken({
+      userId: user.id,
+      role: user.role,
+    });
 
-    // Store the token in the customer session cookie.
-    await setCustomerSession(token);
+    await setSessionCookie(token);
 
     return NextResponse.json({
       success: true,
-      message: "Login successful.",
-
+      message: "Agent login successful.",
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
-        phone: user.phone,
         role: user.role,
       },
     });
   } catch (error) {
     console.error(
-      "POST /api/auth/login failed:",
+      "POST /api/agent/login failed:",
       error,
     );
 
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Login nahi ho paaya.",
+        message: "Agent login nahi ho paaya.",
       },
       {
         status: 500,

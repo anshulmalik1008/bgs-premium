@@ -1,403 +1,578 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import "./track-order.css";
+import Link from "next/link";
+import {
+  useState,
+  type FormEvent,
+} from "react";
 
-type TrackingStep = {
+import {
+  ArrowLeft,
+  Check,
+  Circle,
+  Gift,
+  LoaderCircle,
+  MapPin,
+  PackageCheck,
+  Search,
+  Truck,
+} from "lucide-react";
+
+type OrderStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "PROCESSING"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED";
+
+type TrackingOrder = {
   id: number;
-  title: string;
-  description: string;
-  time: string;
-  status: "completed" | "active" | "upcoming";
-};
 
-const demoSteps: TrackingStep[] = [
-  {
-    id: 1,
-    title: "Order confirmed",
-    description: "Your order has been received and payment is verified.",
-    time: "03 Aug, 10:42 AM",
-    status: "completed",
-  },
-  {
-    id: 2,
-    title: "Gift preparation",
-    description: "Our team is preparing your gift and premium packaging.",
-    time: "03 Aug, 12:15 PM",
-    status: "completed",
-  },
-  {
-    id: 3,
-    title: "Ready for dispatch",
-    description: "The order is packed and waiting for courier pickup.",
-    time: "Expected today",
-    status: "active",
-  },
-  {
-    id: 4,
-    title: "Out for delivery",
-    description: "Your gift will be delivered to the recipient.",
-    time: "Expected tomorrow",
-    status: "upcoming",
-  },
-  {
-    id: 5,
-    title: "Delivered",
-    description: "The gifting experience is complete.",
-    time: "Expected by 05 Aug",
-    status: "upcoming",
-  },
-];
+  orderNumber: string;
 
-function Icon({
-  type,
-}: {
-  type:
-    | "search"
-    | "package"
-    | "truck"
-    | "check"
-    | "location"
-    | "phone"
-    | "arrow"
-    | "gift"
-    | "clock";
-}) {
-  const common = {
-    viewBox: "0 0 24 24",
-    className: "track-icon",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.8,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
+  status: OrderStatus;
+
+  paymentStatus:
+    | "PENDING"
+    | "PAID"
+    | "FAILED"
+    | "REFUNDED";
+
+  subtotal: string | number;
+  shipping: string | number;
+  discount: string | number;
+  total: string | number;
+
+  giftMessage?: string | null;
+
+  createdAt: string;
+  updatedAt: string;
+
+  user: {
+    name: string;
+    email: string;
+    phone?: string | null;
   };
 
-  if (type === "search") {
-    return (
-      <svg {...common}>
-        <circle cx="11" cy="11" r="7" />
-        <path d="m20 20-4-4" />
-      </svg>
-    );
+  address: {
+    fullName: string;
+    phone: string;
+    line1: string;
+    line2?: string | null;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+
+  items: Array<{
+    id: number;
+    quantity: number;
+    price: string | number;
+
+    product: {
+      id: number;
+      name: string;
+      slug: string;
+      images: unknown;
+    };
+  }>;
+};
+
+type TrackingResponse = {
+  success: boolean;
+  message?: string;
+  order?: TrackingOrder;
+};
+
+const trackingSteps = [
+  {
+    id: "CONFIRMED",
+    title: "Order Confirmed",
+    text: "Your order has been received.",
+  },
+
+  {
+    id: "PROCESSING",
+    title: "Preparing Your Gift",
+    text: "Your order is being prepared.",
+  },
+
+  {
+    id: "SHIPPED",
+    title: "Shipped",
+    text: "Your gift is on the way.",
+  },
+
+  {
+    id: "DELIVERED",
+    title: "Delivered",
+    text: "Your order has been delivered.",
+  },
+] as const;
+
+function statusIndex(status: OrderStatus) {
+  if (status === "PENDING") {
+    return 0;
   }
 
-  if (type === "package") {
-    return (
-      <svg {...common}>
-        <path d="m4 7 8-4 8 4-8 4-8-4Z" />
-        <path d="M4 7v10l8 4 8-4V7M12 11v10" />
-      </svg>
-    );
+  if (status === "CONFIRMED") {
+    return 0;
   }
 
-  if (type === "truck") {
-    return (
-      <svg {...common}>
-        <path d="M3 6h11v10H3Z" />
-        <path d="M14 10h4l3 3v3h-7Z" />
-        <circle cx="7" cy="18" r="2" />
-        <circle cx="17" cy="18" r="2" />
-      </svg>
-    );
+  if (status === "PROCESSING") {
+    return 1;
   }
 
-  if (type === "check") {
-    return (
-      <svg {...common}>
-        <path d="m5 12 4 4L19 6" />
-      </svg>
-    );
+  if (status === "SHIPPED") {
+    return 2;
   }
 
-  if (type === "location") {
-    return (
-      <svg {...common}>
-        <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
-        <circle cx="12" cy="10" r="2.5" />
-      </svg>
-    );
+  if (status === "DELIVERED") {
+    return 3;
   }
 
-  if (type === "phone") {
-    return (
-      <svg {...common}>
-        <path d="M7 3h3l1.5 4-2 1.5c1.2 2.5 3.2 4.5 5.7 5.7l1.5-2 4 1.5v3A3.3 3.3 0 0 1 17.4 20C9.9 20 4 14.1 4 6.6A3.6 3.6 0 0 1 7 3Z" />
-      </svg>
-    );
-  }
+  return -1;
+}
 
-  if (type === "gift") {
-    return (
-      <svg {...common}>
-        <rect x="3" y="9" width="18" height="12" rx="2" />
-        <path d="M12 9v12M3 13h18M12 9H8.5A2.5 2.5 0 1 1 11 6.5V9Zm0 0h3.5A2.5 2.5 0 1 0 13 6.5V9Z" />
-      </svg>
-    );
-  }
-
-  if (type === "clock") {
-    return (
-      <svg {...common}>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 2" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg {...common}>
-      <path d="M5 12h14" />
-      <path d="m14 7 5 5-5 5" />
-    </svg>
-  );
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(date));
 }
 
 export default function TrackOrderPage() {
-  const [orderId, setOrderId] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [searched, setSearched] = useState(false);
+  const [orderNumber, setOrderNumber] =
+    useState("");
 
-  const progress = useMemo(() => {
-    const completed = demoSteps.filter(
-      (step) => step.status === "completed"
-    ).length;
+  const [email, setEmail] =
+    useState("");
 
-    const active = demoSteps.some((step) => step.status === "active") ? 1 : 0;
+  const [order, setOrder] =
+    useState<TrackingOrder | null>(null);
 
-    return ((completed + active * 0.5) / demoSteps.length) * 100;
-  }, []);
+  const [loading, setLoading] =
+    useState(false);
 
-  function handleTrack(event: React.FormEvent<HTMLFormElement>) {
+  const [error, setError] =
+    useState("");
+
+  async function trackOrder(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
-    if (!orderId.trim() || !mobile.trim()) return;
+    setError("");
+    setOrder(null);
 
-    setSearched(true);
+    const cleanOrderNumber =
+      orderNumber.trim();
+
+    const cleanEmail =
+      email.trim().toLowerCase();
+
+    if (!cleanOrderNumber || !cleanEmail) {
+      setError(
+        "Enter your order number and email address.",
+      );
+
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Fetch the latest order status from MySQL.
+      const response = await fetch(
+        `/api/orders/track?orderNumber=${encodeURIComponent(
+          cleanOrderNumber,
+        )}&email=${encodeURIComponent(
+          cleanEmail,
+        )}`,
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
+
+      const data =
+        (await response.json()) as TrackingResponse;
+
+      if (
+        !response.ok ||
+        !data.success ||
+        !data.order
+      ) {
+        throw new Error(
+          data.message ||
+            "Order could not be found.",
+        );
+      }
+
+      setOrder(data.order);
+    } catch (error) {
+      console.error(
+        "Track order failed:",
+        error,
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Order tracking failed.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
+  const activeStep = order
+    ? statusIndex(order.status)
+    : -1;
+
   return (
-    <main className="track-page">
-      <section className="track-hero">
-        <div className="track-grid-overlay" />
+    <main className="min-h-screen bg-[#f5f2eb] px-4 py-8 text-[#181512] sm:px-8 lg:px-12">
+      <div className="mx-auto max-w-[1250px]">
+        <header className="mb-10 flex items-center justify-between">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-sm text-black/50"
+          >
+            <ArrowLeft size={16} />
+            Back to BGS Luxury
+          </Link>
 
-        <div className="track-shell track-hero-grid">
-          <div className="track-hero-copy">
-            <span className="track-kicker">✦ Track Your Gift</span>
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#181512] text-[#d8b557]">
+              <Gift size={19} />
+            </div>
 
-            <h1>
-              Follow every step,
-              <span>from us to them.</span>
-            </h1>
+            <div>
+              <strong className="block text-sm">
+                BGS Luxury
+              </strong>
 
-            <p>
-              Enter your order details to view the latest delivery status and
-              expected arrival.
-            </p>
-
-            <form className="track-search-form" onSubmit={handleTrack}>
-              <label>
-                <span>Order ID</span>
-
-                <div>
-                  <Icon type="package" />
-
-                  <input
-                    value={orderId}
-                    onChange={(event) => setOrderId(event.target.value)}
-                    placeholder="Example: BGS-482913"
-                    required
-                  />
-                </div>
-              </label>
-
-              <label>
-                <span>Mobile number</span>
-
-                <div>
-                  <Icon type="phone" />
-
-                  <input
-                    value={mobile}
-                    onChange={(event) => setMobile(event.target.value)}
-                    placeholder="+91 98765 43210"
-                    inputMode="tel"
-                    required
-                  />
-                </div>
-              </label>
-
-              <button type="submit">
-                <Icon type="search" />
-                Track order
-              </button>
-            </form>
+              <span className="text-[9px] uppercase tracking-[0.18em] text-black/35">
+                Order Tracking
+              </span>
+            </div>
           </div>
+        </header>
 
-          <div className="track-visual" aria-hidden="true">
-            <div className="track-glow" />
-            <div className="track-orbit track-orbit-one" />
-            <div className="track-orbit track-orbit-two" />
+        <section className="overflow-hidden rounded-[34px] bg-[#12110e] p-7 text-white sm:p-10 lg:p-14">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d8b557]">
+            Track Your Gift
+          </span>
 
-            <div className="track-package">
-              <Icon type="gift" />
-              <span>BGS</span>
-            </div>
-
-            <div className="track-road">
-              <div className="track-road-line" />
-              <div className="track-truck">
-                <Icon type="truck" />
-              </div>
-            </div>
-
-            <span className="track-float track-float-one">
-              Secure Packaging
+          <h1 className="mt-5 max-w-[800px] text-5xl font-semibold tracking-[-0.06em] sm:text-6xl lg:text-7xl">
+            Follow every step of your
+            <span className="block text-[#b5a475]">
+              gifting journey.
             </span>
+          </h1>
 
-            <span className="track-float track-float-two">
-              Live Updates
-            </span>
-          </div>
-        </div>
-      </section>
+          <p className="mt-5 max-w-xl text-sm leading-7 text-white/40">
+            Enter the order number from your
+            confirmation and the email used
+            during checkout.
+          </p>
 
-      <section className="track-main">
-        <div className="track-shell">
-          {!searched ? (
-            <div className="track-placeholder">
-              <div className="track-placeholder-icon">
-                <Icon type="location" />
-              </div>
+          <form
+            onSubmit={trackOrder}
+            className="mt-9 grid gap-3 lg:grid-cols-[1fr_1fr_auto]"
+          >
+            <input
+              value={orderNumber}
+              onChange={(event) =>
+                setOrderNumber(
+                  event.target.value,
+                )
+              }
+              placeholder="BGS-12345678"
+              className="h-14 rounded-2xl border border-white/10 bg-white/[0.06] px-5 text-sm outline-none placeholder:text-white/25 focus:border-[#d8b557]/40"
+            />
 
-              <span className="track-kicker">Order Journey</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(event) =>
+                setEmail(
+                  event.target.value,
+                )
+              }
+              placeholder="Email address"
+              className="h-14 rounded-2xl border border-white/10 bg-white/[0.06] px-5 text-sm outline-none placeholder:text-white/25 focus:border-[#d8b557]/40"
+            />
 
-              <h2>Your delivery timeline will appear here.</h2>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#d8b557] px-7 font-semibold text-[#181512] disabled:opacity-60"
+            >
+              {loading ? (
+                <>
+                  <LoaderCircle
+                    size={17}
+                    className="animate-spin"
+                  />
+                  Tracking
+                </>
+              ) : (
+                <>
+                  <Search size={17} />
+                  Track Order
+                </>
+              )}
+            </button>
+          </form>
 
-              <p>
-                Use the order ID and mobile number linked to your purchase.
-              </p>
+          {error && (
+            <div className="mt-4 rounded-2xl border border-red-400/10 bg-red-400/[0.07] px-4 py-3 text-sm text-red-200">
+              {error}
             </div>
-          ) : (
-            <>
-              <section className="track-summary">
-                <div>
-                  <p>Order Number</p>
-                  <h2>{orderId.toUpperCase()}</h2>
-                  <span>Royal Celebration Hamper</span>
-                </div>
-
-                <div className="track-status-badge">
-                  <span />
-                  Ready for dispatch
-                </div>
-              </section>
-
-              <section className="track-progress-card">
-                <div className="track-progress-heading">
-                  <div>
-                    <span className="track-kicker">Live Order Status</span>
-                    <h2>Your gift is being prepared for dispatch.</h2>
-                  </div>
-
-                  <div className="track-estimate">
-                    <Icon type="clock" />
-
-                    <div>
-                      <span>Estimated delivery</span>
-                      <strong>05 Aug 2026</strong>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="track-progress-bar">
-                  <span style={{ width: `${progress}%` }} />
-                </div>
-
-                <div className="track-timeline">
-                  {demoSteps.map((step) => (
-                    <article
-                      key={step.id}
-                      className={`track-step track-step-${step.status}`}
-                    >
-                      <div className="track-step-marker">
-                        {step.status === "completed" ? (
-                          <Icon type="check" />
-                        ) : step.status === "active" ? (
-                          <Icon type="package" />
-                        ) : (
-                          <span>{step.id}</span>
-                        )}
-                      </div>
-
-                      <div>
-                        <p>{step.time}</p>
-                        <h3>{step.title}</h3>
-                        <span>{step.description}</span>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-
-              <section className="track-info-grid">
-                <article>
-                  <div className="track-info-icon">
-                    <Icon type="location" />
-                  </div>
-
-                  <p>Delivery Address</p>
-
-                  <h3>Home</h3>
-
-                  <span>
-                    Raj Nagar Extension, Ghaziabad, Uttar Pradesh – 201017
-                  </span>
-                </article>
-
-                <article>
-                  <div className="track-info-icon">
-                    <Icon type="truck" />
-                  </div>
-
-                  <p>Delivery Partner</p>
-
-                  <h3>BGS Premium Logistics</h3>
-
-                  <span>Tracking ID: BGSL-982145</span>
-                </article>
-
-                <article>
-                  <div className="track-info-icon">
-                    <Icon type="phone" />
-                  </div>
-
-                  <p>Need Help?</p>
-
-                  <h3>Gift Concierge</h3>
-
-                  <a href="tel:+919876543210">
-                    Contact support
-                    <Icon type="arrow" />
-                  </a>
-                </article>
-              </section>
-
-              <section className="track-actions">
-                <a href="/account">
-                  View all orders
-                  <Icon type="arrow" />
-                </a>
-
-                <a href="/shop" className="secondary">
-                  Continue shopping
-                </a>
-              </section>
-            </>
           )}
-        </div>
-      </section>
+        </section>
+
+        {order && (
+          <section className="mt-5 grid gap-5 lg:grid-cols-[1.5fr_.8fr]">
+            <div className="rounded-[30px] border border-black/[0.06] bg-white/80 p-6 sm:p-8">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#98701f]">
+                    Live Order Status
+                  </span>
+
+                  <h2 className="mt-2 text-3xl font-semibold tracking-[-0.05em]">
+                    {order.orderNumber}
+                  </h2>
+
+                  <p className="mt-2 text-xs text-black/40">
+                    Ordered{" "}
+                    {formatDate(
+                      order.createdAt,
+                    )}
+                  </p>
+                </div>
+
+                <span className="rounded-full bg-[#181512] px-4 py-2 text-[9px] font-bold uppercase tracking-[0.12em] text-[#e4c15c]">
+                  {order.status}
+                </span>
+              </div>
+
+              {order.status ===
+              "CANCELLED" ? (
+                <div className="mt-8 rounded-2xl bg-red-50 p-5 text-sm text-red-700">
+                  This order has been
+                  cancelled.
+                </div>
+              ) : (
+                <div className="mt-10 grid gap-5">
+                  {trackingSteps.map(
+                    (step, index) => {
+                      const completed =
+                        index <= activeStep;
+
+                      return (
+                        <div
+                          key={step.id}
+                          className="flex gap-4"
+                        >
+                          <div className="flex flex-col items-center">
+                            <div
+                              className={`grid h-10 w-10 place-items-center rounded-full ${
+                                completed
+                                  ? "bg-[#181512] text-[#e4c15c]"
+                                  : "bg-black/[0.05] text-black/25"
+                              }`}
+                            >
+                              {completed ? (
+                                <Check
+                                  size={17}
+                                />
+                              ) : (
+                                <Circle
+                                  size={16}
+                                />
+                              )}
+                            </div>
+
+                            {index <
+                              trackingSteps.length -
+                                1 && (
+                              <div
+                                className={`h-12 w-px ${
+                                  index <
+                                  activeStep
+                                    ? "bg-[#b89132]"
+                                    : "bg-black/10"
+                                }`}
+                              />
+                            )}
+                          </div>
+
+                          <div className="pt-1">
+                            <strong className="text-sm">
+                              {step.title}
+                            </strong>
+
+                            <p className="mt-1 text-xs text-black/40">
+                              {step.text}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+              )}
+
+              <div className="mt-9 border-t border-black/[0.06] pt-7">
+                <h3 className="text-xl font-semibold tracking-[-0.04em]">
+                  Order Items
+                </h3>
+
+                <div className="mt-5 grid gap-3">
+                  {order.items.map(
+                    (item) => (
+                      <article
+                        key={item.id}
+                        className="flex items-center justify-between gap-5 rounded-2xl bg-[#f5f2eb] p-4"
+                      >
+                        <div>
+                          <strong className="text-sm">
+                            {
+                              item.product
+                                .name
+                            }
+                          </strong>
+
+                          <p className="mt-1 text-[10px] text-black/40">
+                            Quantity:{" "}
+                            {item.quantity}
+                          </p>
+                        </div>
+
+                        <strong className="text-sm">
+                          ₹
+                          {(
+                            Number(
+                              item.price,
+                            ) *
+                            item.quantity
+                          ).toLocaleString(
+                            "en-IN",
+                          )}
+                        </strong>
+                      </article>
+                    ),
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <aside className="grid content-start gap-5">
+              <article className="rounded-[28px] bg-white/80 p-6">
+                <div className="flex items-center gap-3">
+                  <MapPin
+                    size={19}
+                    className="text-[#98701f]"
+                  />
+
+                  <h3 className="font-semibold">
+                    Delivery Address
+                  </h3>
+                </div>
+
+                <p className="mt-5 text-sm font-semibold">
+                  {
+                    order.address
+                      .fullName
+                  }
+                </p>
+
+                <p className="mt-2 text-xs leading-6 text-black/45">
+                  {order.address.line1}
+                  {order.address.line2
+                    ? `, ${order.address.line2}`
+                    : ""}
+                  <br />
+
+                  {order.address.city},{" "}
+                  {order.address.state} -{" "}
+                  {
+                    order.address
+                      .postalCode
+                  }
+                </p>
+              </article>
+
+              <article className="rounded-[28px] bg-[#181512] p-6 text-white">
+                <div className="flex items-center gap-3 text-[#e4c15c]">
+                  <PackageCheck
+                    size={19}
+                  />
+
+                  <h3 className="font-semibold">
+                    Order Summary
+                  </h3>
+                </div>
+
+                <div className="mt-6 grid gap-4 text-xs">
+                  <div className="flex justify-between text-white/45">
+                    <span>Subtotal</span>
+
+                    <strong className="text-white">
+                      ₹
+                      {Number(
+                        order.subtotal,
+                      ).toLocaleString(
+                        "en-IN",
+                      )}
+                    </strong>
+                  </div>
+
+                  <div className="flex justify-between text-white/45">
+                    <span>Shipping</span>
+
+                    <strong className="text-white">
+                      ₹
+                      {Number(
+                        order.shipping,
+                      ).toLocaleString(
+                        "en-IN",
+                      )}
+                    </strong>
+                  </div>
+
+                  <div className="flex justify-between border-t border-white/10 pt-4 text-white/45">
+                    <span>Total</span>
+
+                    <strong className="text-lg text-[#e4c15c]">
+                      ₹
+                      {Number(
+                        order.total,
+                      ).toLocaleString(
+                        "en-IN",
+                      )}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex items-center gap-2 rounded-xl bg-white/[0.05] p-3 text-[10px] text-white/45">
+                  <Truck size={15} />
+                  Status updates are synced
+                  with the Agent Portal.
+                </div>
+              </article>
+            </aside>
+          </section>
+        )}
+      </div>
     </main>
   );
 }

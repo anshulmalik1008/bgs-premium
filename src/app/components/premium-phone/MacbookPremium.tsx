@@ -195,22 +195,27 @@ export default function MacbookPremium() {
   }
 
   function addToCart(product: PremiumProduct) {
-    setCartItems((current) => {
-      const existing = current.find(
+    try {
+      const currentCart = readCart();
+
+      const existing = currentCart.find(
         (item) => item.id === product.id,
       );
 
-      const next: CartItem[] = existing
-        ? current.map((item) =>
+      const nextCart: CartItem[] = existing
+        ? currentCart.map((item) =>
             item.id === product.id
               ? {
                   ...item,
-                  quantity: Math.min(item.quantity + 1, 10),
+                  quantity: Math.min(
+                    (item.quantity || 1) + 1,
+                    10,
+                  ),
                 }
               : item,
           )
         : [
-            ...current,
+            ...currentCart,
             {
               ...product,
               name: product.title,
@@ -220,18 +225,88 @@ export default function MacbookPremium() {
 
       window.localStorage.setItem(
         CART_STORAGE_KEY,
-        JSON.stringify(next),
+        JSON.stringify(nextCart),
       );
 
-      return next;
-    });
+      setCartItems(nextCart);
 
-    setAddedProductId(product.id);
+      // Notify other UI components that the cart has changed.
+      window.dispatchEvent(
+        new CustomEvent("bgs-cart-updated", {
+          detail: {
+            cart: nextCart,
+          },
+        }),
+      );
 
-    window.setTimeout(() => {
-      setAddedProductId(null);
-    }, 1400);
+      setAddedProductId(product.id);
+
+      window.setTimeout(() => {
+        setAddedProductId(null);
+      }, 1400);
+    } catch (error) {
+      console.error(
+        "Failed to add product to cart:",
+        error,
+      );
+    }
   }
+
+  function buyNow(product: PremiumProduct) {
+  try {
+    const buyNowItem: CartItem = {
+      ...product,
+      name: product.title,
+      quantity: 1,
+    };
+
+    const currentCart = readCart();
+
+    const existing = currentCart.find(
+      (item) => item.id === product.id,
+    );
+
+    const nextCart: CartItem[] = existing
+      ? currentCart.map((item) =>
+          item.id === product.id
+            ? {
+                ...item,
+                quantity: 1,
+              }
+            : item,
+        )
+      : [...currentCart, buyNowItem];
+
+    // Save the product in the normal cart.
+    window.localStorage.setItem(
+      CART_STORAGE_KEY,
+      JSON.stringify(nextCart),
+    );
+
+    // Save the complete Buy Now product separately.
+    window.localStorage.setItem(
+      "bgs_buy_now",
+      JSON.stringify(buyNowItem),
+    );
+
+    setCartItems(nextCart);
+
+    window.dispatchEvent(
+      new CustomEvent("bgs-cart-updated", {
+        detail: {
+          cart: nextCart,
+        },
+      }),
+    );
+
+    window.location.href = `/checkout?product=${product.id}&mode=buy-now`;
+  } catch (error) {
+    console.error(
+      "Buy now failed:",
+      error,
+    );
+  }
+}
 
   return (
     <section className="relative overflow-hidden bg-[#f6f4ef] py-20 sm:py-28 lg:py-32">
@@ -536,12 +611,13 @@ export default function MacbookPremium() {
                                 Details
                               </Link>
 
-                              <Link
-                                href={`/checkout?product=${product.id}`}
+                              <button
+                                type="button"
+                                onClick={() => buyNow(product)}
                                 className="flex min-h-8 items-center justify-center rounded-full bg-[#d0aa5c] text-[8px] font-semibold text-[#17130d] transition hover:bg-[#dfbd78] sm:min-h-9 sm:text-[9px]"
                               >
                                 Buy Now
-                              </Link>
+                              </button>
                             </div>
                           </div>
                         </motion.article>

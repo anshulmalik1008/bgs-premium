@@ -1,0 +1,66 @@
+
+/* Add these rules at the end of product.css */
+
+.product-main-image-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.product-main-image {
+  object-fit: cover;
+  transition: transform 0.7s ease;
+}
+
+.product-main-visual:hover .product-main-image {
+  transform: scale(1.04);
+}
+
+.product-main-image-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(17, 12, 7, 0.01), rgba(17, 12, 7, 0.18)),
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.2), transparent 30%);
+  pointer-events: none;
+}
+
+.product-main-visual .product-badge,
+.product-main-visual .product-heart,
+.product-main-visual .product-float {
+  z-index: 6;
+}
+
+.product-thumbnails button {
+  position: relative;
+  overflow: hidden;
+}
+
+.product-thumbnail-image {
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.product-thumbnails button:hover .product-thumbnail-image {
+  transform: scale(1.07);
+}
+
+.product-buy {
+  border: 0;
+  cursor: pointer;
+}
+
+.product-related-visual {
+  position: relative;
+  overflow: hidden;
+}
+
+.product-related-image {
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.product-related-grid article:hover .product-related-image {
+  transform: scale(1.06);
+}
