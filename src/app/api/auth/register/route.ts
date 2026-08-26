@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { prisma } from "@/lib/prisma";
-import { createSessionToken, setSessionCookie } from "@/lib/auth";
+import {
+  createSessionToken,
+  setCustomerSession,
+} from "@/lib/auth";
 
 type RegisterBody = {
   name?: string;
@@ -26,15 +29,28 @@ export async function POST(request: Request) {
 
     if (name.length < 2) {
       return NextResponse.json(
-        { success: false, message: "Valid name enter karo." },
-        { status: 400 },
+        {
+          success: false,
+          message: "Please enter a valid name.",
+        },
+        {
+          status: 400,
+        },
       );
     }
 
-    if (!email.includes("@")) {
+    if (
+      !email ||
+      !email.includes("@")
+    ) {
       return NextResponse.json(
-        { success: false, message: "Valid email enter karo." },
-        { status: 400 },
+        {
+          success: false,
+          message: "Please enter a valid email address.",
+        },
+        {
+          status: 400,
+        },
       );
     }
 
@@ -42,82 +58,120 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message: "Password minimum 8 characters ka hona chahiye.",
+          message:
+            "Password must be at least 8 characters long.",
         },
-        { status: 400 },
+        {
+          status: 400,
+        },
       );
     }
 
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email },
-          ...(phone ? [{ phone }] : []),
-        ],
-      },
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-      },
-    });
+    const existingUser =
+      await prisma.user.findFirst({
+        where: {
+          OR: [
+            {
+              email,
+            },
+
+            ...(phone
+              ? [
+                  {
+                    phone,
+                  },
+                ]
+              : []),
+          ],
+        },
+
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+        },
+      });
 
     if (existingUser) {
       return NextResponse.json(
         {
           success: false,
+
           message:
             existingUser.email === email
-              ? "Is email se account already bana hua hai."
-              : "Is mobile number se account already bana hua hai.",
+              ? "An account already exists with this email address."
+              : "An account already exists with this mobile number.",
         },
-        { status: 409 },
+        {
+          status: 409,
+        },
       );
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    // Hash the password before storing it.
+    const passwordHash =
+      await bcrypt.hash(
+        password,
+        12,
+      );
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        phone,
-        passwordHash,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        createdAt: true,
-      },
-    });
+    // Create a new customer account.
+    const user =
+      await prisma.user.create({
+        data: {
+          name,
+          email,
+          phone,
+          passwordHash,
+          role: "CUSTOMER",
+        },
 
-    const token = await createSessionToken({
-      userId: user.id,
-      role: user.role,
-    });
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          createdAt: true,
+        },
+      });
 
-    await setSessionCookie(token);
+    // Create the customer authentication token.
+    const token =
+      await createSessionToken({
+        userId: user.id,
+        role: user.role,
+      });
+
+    // Automatically sign in the customer after registration.
+    await setCustomerSession(token);
 
     return NextResponse.json(
       {
         success: true,
-        message: "Account successfully create ho gaya.",
+        message:
+          "Account created successfully.",
         user,
       },
-      { status: 201 },
+      {
+        status: 201,
+      },
     );
   } catch (error) {
-    console.error("POST /api/auth/register failed:", error);
+    console.error(
+      "POST /api/auth/register failed:",
+      error,
+    );
 
     return NextResponse.json(
       {
         success: false,
-        message: "Account create nahi ho paaya.",
+        message:
+          "Unable to create your account.",
       },
-      { status: 500 },
+      {
+        status: 500,
+      },
     );
   }
 }

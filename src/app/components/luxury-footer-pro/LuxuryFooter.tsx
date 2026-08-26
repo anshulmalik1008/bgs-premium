@@ -320,6 +320,7 @@ export default function LuxuryFooter() {
             ))}
           </div>
         </div>
+        
 
         <div className="relative overflow-hidden rounded-[30px] border border-white/[0.08] bg-white/[0.035] px-6 py-6 backdrop-blur-xl lg:px-8">
           <div className="absolute -left-8 top-1/2 h-24 w-24 -translate-y-1/2 rounded-full bg-[#d6b26f]/12 blur-2xl" />

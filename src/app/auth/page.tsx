@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import {
   type FormEvent,
   useEffect,
@@ -124,6 +127,17 @@ function Icon({
 
 export default function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const redirectParam =
+    searchParams.get("redirect");
+
+  const redirectTo =
+    redirectParam &&
+    redirectParam.startsWith("/") &&
+    !redirectParam.startsWith("//")
+      ? redirectParam
+      : "/account";
 
   const {
     user,
@@ -142,11 +156,15 @@ export default function AuthPage() {
   >("");
 
   useEffect(() => {
-    if (!authLoading && user) {
-      router.replace("/account");
-    }
-  }, [authLoading, user, router]);
-
+  if (!authLoading && user) {
+    router.replace(redirectTo);
+  }
+}, [
+  authLoading,
+  user,
+  router,
+  redirectTo,
+]);
   function updateField(
     field: keyof FormState,
     value: string,
@@ -180,21 +198,21 @@ export default function AuthPage() {
 
     if (mode === "register") {
       if (form.name.trim().length < 2) {
-        setMessage("Valid full name enter karo.");
+        setMessage("please enter a valid name.");
         setMessageType("error");
         return;
       }
 
       if (form.password.length < 8) {
         setMessage(
-          "Password minimum 8 characters ka hona chahiye.",
+          "Password must be at least 8 characters long.",
         );
         setMessageType("error");
         return;
       }
 
       if (form.password !== form.confirmPassword) {
-        setMessage("Password aur confirm password match nahi karte.");
+        setMessage("Password do not match .");
         setMessageType("error");
         return;
       }
@@ -220,9 +238,9 @@ export default function AuthPage() {
       setMessageType(result.success ? "success" : "error");
 
       if (result.success) {
-        router.push("/account");
-        router.refresh();
-      }
+  router.replace(redirectTo);
+  router.refresh();
+}
     } finally {
       setSubmitting(false);
     }
